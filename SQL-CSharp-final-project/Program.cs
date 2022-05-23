@@ -16,7 +16,7 @@ namespace SQL_CSharp_final_project
 
 
             Shell.Shell.shellInit();
-            
+
             while (true)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -26,7 +26,7 @@ namespace SQL_CSharp_final_project
 
                 Shell.Shell.parseCommand(Shell.Shell.buffer);
             }
-
+            
         }
     }
 }

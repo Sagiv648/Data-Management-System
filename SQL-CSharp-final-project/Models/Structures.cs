@@ -17,17 +17,18 @@ namespace SQL_CSharp_final_project.Models
 
         public static void setupConnection()
         {
-          
+            
             File.WriteAllText(connectionFile, connectionString);
 
         }
 
         public static bool readSettingsFromFile()
         {
+
             if (!File.Exists(connectionFile)) return false;
 
             connectionString = File.ReadAllText(connectionFile);
-            
+            Console.WriteLine(connectionString);
             int i;
             for(i = 0; i < connectionString.Length; i++)
             {
@@ -136,10 +137,10 @@ namespace SQL_CSharp_final_project.Models
             string columnsBuffer = "";
             for (i = 0; i < t.totalColumns; i++)
             { 
-                columnsBuffer += $"{t[i].ColName} {t[i].ColType.CompleteType}";
+                columnsBuffer += $"{t[i].ColName} {t[i].ColType.CompleteType} ";
                 if(t[i].isPrimaryKey)
                 {
-                    columnsBuffer += $"constraint PK_{t[i].ColName} Primary Key({t[i].ColName}),";
+                    columnsBuffer += $"constraint PK_{t[i].ColName} Primary Key({t[i].ColName})";
                 }
 
 
@@ -238,9 +239,6 @@ namespace SQL_CSharp_final_project.Models
             Tables.Add(t);
         }
 
-
-
-
     }
 
 
@@ -326,7 +324,11 @@ namespace SQL_CSharp_final_project.Models
             Columns.Add(col);
 
         }
-        public bool removeColumn(Column col)
+        public void removeColumn(Column col)
+        {
+            Columns.Remove(col);
+        }
+        public bool deleteColumn(Column col)
         {
             foreach (Column item in Columns)
             {
@@ -335,6 +337,7 @@ namespace SQL_CSharp_final_project.Models
             Columns.Remove(col);
             SqlConnection conn = new SqlConnection(Connection.connectionString);
             SqlCommand cmd = conn.CreateCommand();
+            conn.Open();
             cmd.CommandText = $@"alter table [{TName}]
                                 drop column {col.ColName}";
             cmd.ExecuteNonQuery();
@@ -613,7 +616,7 @@ namespace SQL_CSharp_final_project.Models
             }
         }
 
-        public static void setData(int dataIndex, string newData, List<Data> allData)
+        public static void setData(int dataIndex, string newData, ref List<Data> allData)
         {
             allData[dataIndex].setData = newData;
         }

@@ -16,7 +16,7 @@ namespace SQL_CSharp_final_project.Shell
       
         public delegate void paramCommand(string[] cmd);
         public delegate void generalCommand();
-
+        
 
         public static List<Database> totalDatabases = new List<Database>();
         public static Database contextDatabase = null;
@@ -506,7 +506,7 @@ namespace SQL_CSharp_final_project.Shell
         }
         public static void execSetupConnection()
         {
-            
+            Connection.connectionString = null;
             
             string inputBuffer = "";
             Console.Write("Enter the name of the server:");
@@ -531,7 +531,7 @@ namespace SQL_CSharp_final_project.Shell
             
             Connection.setupConnection();
             populateTotalDatabases();
-            Models.Type.populateSqlTypes(Models.Type.sqlTypes);
+            
 
         }
 
@@ -652,11 +652,91 @@ namespace SQL_CSharp_final_project.Shell
         }
 
         //TODO: Implement delete-like cmd
-        public static void execDeleteData( string[] cmd)
+        public static void execDeleteData(string[] cmd)
         {
+            if (cmd.Length == 1)
+            {
+                Console.WriteLine("Name of the table is needed.", response);
+                return;
+            }
 
+            if (contextDatabase != null)
+            {
+
+
+                Table oldContext = contextTable;
+                if (!contextDatabase.tableExists(cmd[1]))
+                {
+                    Console.WriteLine($"Table {cmd[1]} doesn't exist in {contextDatabase.Name} database.");
+                    return;
+                }
+                contextTable = contextDatabase[cmd[1]];
+
+                Console.Clear();
+                Console.WriteLine();
+                Console.WriteLine($"Records deletion screen for {cmd[1]}");
+                Console.WriteLine($"Current records for {cmd[1]}:");
+                displayAllDetails();
+                Console.Write("Select a column and a value as a predicate for the records deletion:\n");
+                Console.WriteLine("Example [Column_Name]=[Value]");
+
+                SqlConnection conn = new SqlConnection(Connection.connectionString);
+                SqlCommand command = conn.CreateCommand();
+
+                command.CommandText = $"use [{contextDatabase.Name}] delete from {contextTable.TName}";
+                List<string> columnsToRefresh = new List<string>();
+                string predicateInput = Console.ReadLine();
+
+
+                string[] predicateVerification = predicateInput.Split('=');
+                
+                if (predicateVerification.Length != 2)
+                {
+                    Console.WriteLine("Invalid predicate assignment.");
+                    contextTable = oldContext;
+                    return;
+                }
+                if (Models.Type.isStringType(contextTable[predicateVerification[0]].ColType.TypeName))
+                {
+                    command.CommandText += $" where {predicateVerification[0]} = '{predicateVerification[1]}';";
+
+                }
+                else
+                {
+                    command.CommandText += $" where {predicateVerification[0]} = {predicateVerification[1]};";
+                }
+                int i;
+                for(i = 0; i < contextTable.totalColumns; i++)
+                {
+                    
+                   columnsToRefresh.Add(contextTable[i].ColName);
+                    
+                }
+                
+                try
+                {
+                    conn.Open();
+                    command.ExecuteNonQuery();
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Error occured at deletion time, check your connection.");
+                    contextTable = oldContext;
+                    conn.Close();
+                    
+                    
+                    return;
+                }
+                conn.Close();
+                Console.WriteLine("Records deleted successfully.");
+                refreshDbList(columnsToRefresh);
+                Console.WriteLine();
+                displayAllDetails();
+                contextTable = oldContext;
+                return;
+            }
+            execError();
         }
-
         
         public static void execInsertData(string[] cmd)
         {
@@ -742,6 +822,7 @@ namespace SQL_CSharp_final_project.Shell
                     return;
                 }
                 Console.WriteLine("Records inserted successfully.");
+                displayAllDetails();
                 conn.Close();
                 return;
 
@@ -753,7 +834,7 @@ namespace SQL_CSharp_final_project.Shell
             }
         }
 
-        //TODO: Implement update-like cmd
+        //TODO: upgrade(maybe?) update-like cmd
         //
         public static void execUpdateData(string[] cmd)
         {
@@ -765,6 +846,8 @@ namespace SQL_CSharp_final_project.Shell
             
             if(contextDatabase != null)
             {
+                
+                
                 Table oldContext = contextTable;
                 if (!contextDatabase.tableExists(cmd[1]))
                 {
@@ -811,6 +894,7 @@ namespace SQL_CSharp_final_project.Shell
                     Console.WriteLine(inputBuffer[contextTable[i].ColName]);
                     
                 }
+                List<string> columnsToRefresh = new List<string>();
                 SqlConnection conn = new SqlConnection(Connection.connectionString);
                 SqlCommand command = conn.CreateCommand();
                 command.CommandText = $"use[{contextDatabase.Name}] update {contextTable.TName} set ";
@@ -818,14 +902,22 @@ namespace SQL_CSharp_final_project.Shell
                 {
                     if(inputBuffer[contextTable[t].ColName] != "")
                     {
+                        columnsToRefresh.Add(contextTable[t].ColName);
                         command.CommandText += $"{contextTable[t].ColName} = {inputBuffer[contextTable[t].ColName]},";
                     }
                 }
                 command.CommandText = command.CommandText.Remove(command.CommandText.Length - 1, 1);
-                Console.Write("Select a column and a value as a predicate for the update:");
-                Console.WriteLine("Example [Column_Name]=[Value]");
+                Console.WriteLine();
                 displayAllDetails();
+                //-----------------------
+
+                Console.Write("Select a column and a value as a predicate for the update:\n");
+                Console.WriteLine("Example [Column_Name]=[Value]");
+                
+                
                 string predicateInput = Console.ReadLine();
+
+
                 string[] predicateVerification = predicateInput.Split('=');
                 if(predicateVerification.Length != 2)
                 {
@@ -848,40 +940,18 @@ namespace SQL_CSharp_final_project.Shell
                     command.ExecuteNonQuery();
 
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    
-                    Console.WriteLine(e.Message);
+
+                    Console.WriteLine("Error occured at updating time, check your connection.");
                     contextTable = oldContext;
                     conn.Close();
                     return;
                 }
                 conn.Close();
                 Console.WriteLine("Successfully updated the records.");
-
-                
-                int k;
-                int x;
-                for(k = 0; k < contextTable[predicateVerification[0]].retrieveAllData.Count; k++)
-                {
-                    if(contextTable[predicateVerification[0]].retrieveAllData[k].getData == predicateVerification[1])
-                    {
-                        for(x = 0; x < contextTable.totalColumns; x++)
-                        {
-                            if(contextTable[x].ColName != contextTable[predicateVerification[0]].ColName)
-                            {
-                                if (inputBuffer[contextTable[x].ColName] != "")
-                                {
-                                    
-                                    Console.WriteLine($"{contextTable[predicateVerification[0]].retrieveAllData[k].getData}------------{inputBuffer[contextTable[x].ColName]}");
-                                    Models.Column.setData(k, inputBuffer[contextTable[x].ColName], contextTable[x].retrieveAllData);
-                                    //contextTable[x].setData(k, inputBuffer[contextTable[x].ColName]);
-                                }
-                            }
-                        }
-                    }
-                }
-                totalDatabases.Find(m => m.Name == contextDatabase.Name)[contextTable.TName] = contextTable;
+                Console.WriteLine();
+                refreshDbList(columnsToRefresh);
                 displayAllDetails();
                 contextTable = oldContext;
                 return;
@@ -891,7 +961,44 @@ namespace SQL_CSharp_final_project.Shell
             execError();
 
         }
+        //Re-load the edited columns from the database to memory
+        public static void refreshDbList(List<string> colsToRefresh)
+        {
+            foreach (string item in colsToRefresh)
+            {
+                contextTable[item].retrieveAllData.Clear();
+                
+            }
+            SqlConnection conn = new SqlConnection(Connection.connectionString);
+            SqlCommand cmd = conn.CreateCommand();
+            SqlDataReader reader;
+            conn.Open();
+            int i;
+            try
+            {
 
+                for (i = 0; i < colsToRefresh.Count; i++)
+                {
+                    cmd.CommandText = $"use [{contextDatabase.Name}] select {colsToRefresh[i]} from {contextTable.TName}";
+                    reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        contextTable[colsToRefresh[i]].addData(new Data(reader[0].ToString()));
+                    }
+                    reader.Close();
+
+                }
+                conn.Close();
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+
+                throw;
+            }
+
+        }
         public static void execError()
         {
             Console.WriteLine("Error occured during the previous operation, make sure you typed the correct command or made a valid operation.");
@@ -1063,8 +1170,8 @@ namespace SQL_CSharp_final_project.Shell
                 //}
                 //Console.WriteLine();
                 
-                cmd.CommandText = $@"use [{contextDatabase.Name}]
-                                 select * from [{contextTable.TName}]";
+                //cmd.CommandText = $@"use [{contextDatabase.Name}]
+                //                 select * from [{contextTable.TName}]";
                 //conn.Open();
                 //reader = cmd.ExecuteReader();
                 //int k = 0;
@@ -1105,6 +1212,7 @@ namespace SQL_CSharp_final_project.Shell
             //reader.Close();
             //conn.Close();
         }
+
 
     }
 }
