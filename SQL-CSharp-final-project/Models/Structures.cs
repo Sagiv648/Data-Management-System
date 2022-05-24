@@ -28,7 +28,7 @@ namespace SQL_CSharp_final_project.Models
             if (!File.Exists(connectionFile)) return false;
 
             connectionString = File.ReadAllText(connectionFile);
-            Console.WriteLine(connectionString);
+            
             int i;
             for(i = 0; i < connectionString.Length; i++)
             {
@@ -140,7 +140,7 @@ namespace SQL_CSharp_final_project.Models
                 columnsBuffer += $"{t[i].ColName} {t[i].ColType.CompleteType} ";
                 if(t[i].isPrimaryKey)
                 {
-                    columnsBuffer += $"constraint PK_{t[i].ColName} Primary Key({t[i].ColName})";
+                    columnsBuffer += $"constraint PK_{t.TName}_{t[i].ColName} Primary Key({t[i].ColName})";
                 }
 
 
@@ -157,7 +157,7 @@ namespace SQL_CSharp_final_project.Models
             }
 
             columnsBuffer = columnsBuffer.Remove(columnsBuffer.Length - 1);
-            Console.WriteLine(columnsBuffer);
+            
             try
             {
                 SqlConnection conn = new SqlConnection(Connection.connectionString);

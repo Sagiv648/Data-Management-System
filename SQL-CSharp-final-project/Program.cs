@@ -15,6 +15,8 @@ namespace SQL_CSharp_final_project
         {
 
 
+            //Create 2 tables and implement mutual select
+
             Shell.Shell.shellInit();
 
             while (true)

@@ -291,6 +291,7 @@ namespace SQL_CSharp_final_project.Shell
                 newTable[userInputBuffer["Is-PrimaryKey"]].setPrimaryKey = true;
                 newTable[userInputBuffer["Is-PrimaryKey"]].setNullAble = false;
                 contextDatabase.addTable(newTable);
+                Console.WriteLine($"Table {newTable.TName} created successfully.");
                 return;
 
             }
@@ -302,6 +303,122 @@ namespace SQL_CSharp_final_project.Shell
         public static void execSetKeyRelations(string[] cmd)
         {
 
+            if(cmd.Length == 1)
+            {
+                Console.WriteLine("Referencer/Referenced tables and columns required.");
+                return;
+            }
+            else if(cmd.Length == 2)
+            {
+                Console.WriteLine("One of your parameters is missing.");
+                return;
+            }
+            else if(cmd.Length == 3 && contextDatabase != null)
+            {
+                try
+                {
+                    string[] subParameters;
+                    int k;
+                    bool[] correctSyntax = new bool[2];
+                    for (int t = 1; t < cmd.Length; t++)
+                    {
+                        correctSyntax[0] = false;
+                        correctSyntax[1] = false;
+                        subParameters = cmd[t].Split('-');
+                        
+                        if (subParameters.Length != 2)
+                        {
+                            Console.WriteLine("Error occured in the parameters' syntax.");
+                            return;
+                        }
+                        for (k = 0; k < contextDatabase.tableCount(); k++)
+                        {
+                            if (contextDatabase[k].TName == subParameters[0])
+                            {
+                                correctSyntax[0] = true;
+                                for (int x = 0; x < contextDatabase[k].totalColumns; x++)
+                                {
+                                    if (contextDatabase[k][x].ColName == subParameters[1])
+                                    {
+                                        correctSyntax[1] = true;
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        if (!correctSyntax[0] || !correctSyntax[1])
+                        {
+                            Console.WriteLine($"Error occured in referncer/referenced table {subParameters[0]} or referencer/referenced column {subParameters[1]}.");
+                            return;
+                        }
+
+                    }
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("Error occured at naming parameters.");
+                    return;
+
+                    
+                }
+
+                if(contextDatabase != null)
+                {
+
+                    try
+                    {
+                        Dictionary<string, string[]> referencerAndReferenced = new Dictionary<string, string[]>(2);
+
+                        
+                        referencerAndReferenced.Add("referencerTable-Column", cmd[1].Split('-'));
+                        referencerAndReferenced.Add("referencedTable-Column", cmd[2].Split('-'));
+
+                       
+
+
+                        Table referencerTable = contextDatabase[referencerAndReferenced["referencerTable-Column"][0]];
+                        
+                        Column referencerColumn = referencerTable[referencerAndReferenced["referencerTable-Column"][1]];
+                        
+                        Table referencedTable = contextDatabase[referencerAndReferenced["referencedTable-Column"][0]];
+                        
+                        Column referencedColumn = referencedTable[referencerAndReferenced["referencedTable-Column"][1]];
+                        
+
+                        if (referencerColumn.ColType.CompleteType != referencedColumn.ColType.CompleteType)
+                        {
+                            Console.WriteLine($"Columns are not compatible for key relations.");
+                            Console.WriteLine($"Referencer Column: {referencerColumn.ColName}({referencerColumn.ColType.CompleteType})" +
+                                $" is not compatible with the referenced column {referencedColumn.ColName}({referencedColumn.ColType.CompleteType})");
+                            return;
+                        }
+                        if (!referencedTable[referencedColumn.ColName].isPrimaryKey)
+                        {
+                            Console.WriteLine(referencedTable[referencedColumn.ColName].ColName);
+
+                            Console.WriteLine("The referenced column must be a primary key.");
+                            return;
+                        }
+                        contextDatabase[referencerTable.TName][referencerColumn.ColName].setForeignKeyAccessTable = referencedTable;
+                        contextDatabase[referencerTable.TName][referencerColumn.ColName].setForeignKeyAccessColumn = referencedColumn;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                        return;
+
+                        //TODO: Set the functionality to send it to the SQL through alter table
+                    }
+
+                    Console.WriteLine($"Key relations between the tables has been established.");
+                    return;
+
+                }
+                Console.WriteLine("Must be within the context of a database to continue.");
+                return;
+            }
+
+            execError();
 
             //Dictionary<string, string> userInputBuffer = new Dictionary<string, string>(3);
             //userInputBuffer.Add("FK-ReferencedTable", "");
@@ -479,6 +596,7 @@ namespace SQL_CSharp_final_project.Shell
             Console.ForegroundColor = response;
             if(contextDatabase == null)
             {
+
                 Console.WriteLine("Context of a database is needed to execute this command.");
                 return;
             }
@@ -567,32 +685,58 @@ namespace SQL_CSharp_final_project.Shell
                 SqlConnection conn = new SqlConnection(Connection.connectionString);
 
                 SqlDataReader read = null;
+
+               
                 try
                 {
+
+
+                    Dictionary<string, List<string>> queriedData = new Dictionary<string, List<string>>(contextTable.totalColumns);
                     
                     SqlCommand sqlCmd = conn.CreateCommand();
                     sqlCmd.CommandText = $@"use[{contextDatabase.Name}]
                                         select * from [{contextTable.TName}]
                                         where {cmd[1]} = {cmd[2]}";
                     conn.Open();
-                     read = sqlCmd.ExecuteReader();
+                    int t;
+                    for(t = 0; t < contextTable.totalColumns; t++)
+                    {
+                        queriedData.Add(contextTable[t].ColName, new List<string>());
+                        
+                    }
+                    Console.WriteLine();
+                    read = sqlCmd.ExecuteReader();
+                    
                     while (read.Read())
                     {
                         for (int i = 0; i < read.FieldCount; i++)
                         {
-                            Console.Write($"{read[i]} ");
+                            queriedData[read.GetName(i)].Add(read[i].ToString());
+                            
+                        }
+                        
+                    }
+                    read.Close();
+
+                    int j;
+                    for(t = 0; t < contextTable.totalColumns; t++)
+                    {
+                        Console.Write($"{contextTable[t].ColName}: ",response);
+                        for(j = 0; j < queriedData[contextTable[t].ColName].Count; j++)
+                        {
+                            Console.Write($"{queriedData[contextTable[t].ColName][j]} || ");
+
                         }
                         Console.WriteLine();
                     }
-                    read.Close();
 
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e.Message);
-                    //read.Close();
+                   
                     conn.Close();
-                    throw;
+                    return;
                 }
                 finally
                 {
@@ -754,6 +898,8 @@ namespace SQL_CSharp_final_project.Shell
                     Console.WriteLine($"Table {cmd[1]} doesn't exist in {contextDatabase.Name}", response);
                     return;
                 }
+                Table oldContext = contextTable;
+                contextTable = contextDatabase[cmd[1]];
                 int i;
                 Dictionary<string, string> inputBuffer = new Dictionary<string, string>(contextDatabase[cmd[1]].totalColumns);
                 for(i = 0; i < contextDatabase[cmd[1]].totalColumns; i++)
@@ -777,12 +923,36 @@ namespace SQL_CSharp_final_project.Shell
                         }
                         
                     }
+                    else if (Models.Type.isStringType(inputBuffer[contextDatabase[cmd[1]][i].ColName]))
+                    {
+                        while(inputBuffer[contextDatabase[cmd[1]][i].ColName].Length > contextDatabase[cmd[1]][i].ColType.characterLen)
+                        {
+                            Console.Write($"{contextDatabase[cmd[1]][i].ColName} allows only {contextDatabase[cmd[1]][i].ColType.characterLen} chars:");
+                            inputBuffer[contextDatabase[cmd[1]][i].ColName] = Console.ReadLine();
+                        }
+
+                    }
                     
-
-
-
-
                 }
+
+                int t = 0;
+
+                Console.WriteLine("You have queued the following data:");
+                for(t = 0; t < contextTable.totalColumns; t++)
+                {
+                    Console.Write($"{contextTable[t].ColName}({contextTable[t].ColType.CompleteType}): {inputBuffer[contextTable[t].ColName]}");
+                    Console.WriteLine();
+                }
+                string wantsToCancel = "";
+                Console.Write($"If you are not satisified with the data, type 'stop', for anything else type anything else: ");
+                wantsToCancel = Console.ReadLine();
+                if(wantsToCancel.ToLower() == "stop".ToLower())
+                {
+                    Console.WriteLine($"You have cancelled the data insertion for table {contextTable.TName}");
+                    contextTable = oldContext;
+                    return;
+                }
+
                 for(i = 0; i < contextDatabase[cmd[1]].totalColumns; i++)
                 {
                     contextDatabase[cmd[1]][i].addData(new Data(inputBuffer[contextDatabase[cmd[1]][i].ColName]));
@@ -823,6 +993,7 @@ namespace SQL_CSharp_final_project.Shell
                 }
                 Console.WriteLine("Records inserted successfully.");
                 displayAllDetails();
+                contextTable = oldContext;
                 conn.Close();
                 return;
 
@@ -1104,7 +1275,8 @@ namespace SQL_CSharp_final_project.Shell
                             constraintsReader = cmd.ExecuteReader();
                             while (constraintsReader.Read())
                             {
-                                if (constraintsReader["Key"].ToString() == $"PK_{totalDatabases[dIndex][tIndex].TName}")
+                                if (constraintsReader["Key"].ToString() == $"PK_{totalDatabases[dIndex][tIndex].TName}" || 
+                                    constraintsReader["Key"].ToString() == $"PK_{totalDatabases[dIndex][tIndex].TName}_{constraintsReader["Column Name"]}")
                                 {
                                     totalDatabases[dIndex][tIndex][constraintsReader["Column Name"].ToString()].setPrimaryKey = true;
 
