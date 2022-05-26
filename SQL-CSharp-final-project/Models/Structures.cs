@@ -49,15 +49,6 @@ namespace SQL_CSharp_final_project.Models
     }
 
 
-    
-
-
-
-
-
-    
-    //TODO: Implement remove table with functionalities to send it to SQL while removing it from the DB's list.
-    //TODO: Implement alter table with functionalities to send it to SQL while altering it in the DB's list.
     public class Database
     {
 
@@ -123,10 +114,7 @@ namespace SQL_CSharp_final_project.Models
         }
 
 
-        //Foreign Key naming convention: FK_[Referencer_Table/FK_Column]_[Referenced_Table/PK_Column]
-        //CONSTRAINT FK_[RefrencerTable]_[Referenced] FOREIGN KEY([References_Column])
-            //REFERENCES[Referenced_Table]([Referenced_Column])
-            //CONSTRAINT PK_Person PRIMARY KEY (ID,LastName)
+       
         public bool addTable(Table t)
         {
 
@@ -140,7 +128,7 @@ namespace SQL_CSharp_final_project.Models
                 columnsBuffer += $"{t[i].ColName} {t[i].ColType.CompleteType} ";
                 if(t[i].isPrimaryKey)
                 {
-                    columnsBuffer += $"constraint PK_{t.TName}_{t[i].ColName} Primary Key({t[i].ColName})";
+                    columnsBuffer += $"constraint PK@{t.TName}@{t[i].ColName} Primary Key({t[i].ColName})";
                 }
 
 
@@ -242,9 +230,6 @@ namespace SQL_CSharp_final_project.Models
     }
 
 
-    //TODO: Implemnt append column with functionalities to send it to SQL while appending it to the Table's list.
-    //TODO: Implemnt remove column with functionalities to send it to SQL while removing it from the Table's list.
-    //TODO: Implemnt alter column with functionalities to send it to SQL while altering it in the Table's list.
     public class Table
     {
 
@@ -674,6 +659,7 @@ namespace SQL_CSharp_final_project.Models
 
     }
 
+
     public class Data
     {
         private string _Data { get; set; }
@@ -706,6 +692,37 @@ namespace SQL_CSharp_final_project.Models
     //TODO: Implement simple task-cmds(sum, average, max, min, count)
     public static class Task
     {
-
+        public delegate int Operation(Column col);
+        public static Dictionary<string, Operation> operationsList = new Dictionary<string, Operation>();
+        public static void initTasks()
+        {
+            operationsList.Add("sum", sum);
+            operationsList.Add("avg", avg);
+            operationsList.Add("count", count);
+            operationsList.Add("max", max);
+            operationsList.Add("min", min);
+        }
+        //takes a column -> checks if it's type is numeric
+        public static int sum(Column col)
+        {
+            return -1;
+        }
+        public static int avg(Column col)
+        {
+            return -1;
+        }
+        public static int count(Column col)
+        {
+            return -1;
+        }
+        public static int max(Column col)
+        {
+            return -1;
+        }
+        public static int min(Column col)
+        {
+            
+            return -1;
+        }
     }
 }

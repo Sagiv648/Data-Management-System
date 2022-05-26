@@ -43,11 +43,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Models\Brand.cs" />
-    <Compile Include="Models\Department.cs" />
-    <Compile Include="Models\Inventory.cs" />
-    <Compile Include="Models\Order.cs" />
-    <Compile Include="Models\Product.cs" />
     <Compile Include="Models\Structures.cs" />
     <Compile Include="Models\SyntaxParser.cs" />
     <Compile Include="Program.cs" />

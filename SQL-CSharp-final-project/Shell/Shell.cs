@@ -66,6 +66,8 @@ namespace SQL_CSharp_final_project.Shell
             parameterCommandsExecution.Add("update", execUpdateData);
             parameterCommandsExecution.Add("insert-data", execInsertData);
 
+            Models.Task.initTasks();
+
         }
 
         public static void parseCommand(string cmd)
@@ -107,7 +109,7 @@ namespace SQL_CSharp_final_project.Shell
             Console.Write(" ");
             return Console.ReadLine();
         }
-       
+        //--------------------------------------------------------
         public static void execHelp()
         {
             Console.ForegroundColor = response;
@@ -154,7 +156,6 @@ namespace SQL_CSharp_final_project.Shell
             Console.WriteLine("Cannot exit further.");
             
         }
-
         public static void execCreateDatabase(string[] cmd)
         {
             Console.ForegroundColor = response;
@@ -179,7 +180,6 @@ namespace SQL_CSharp_final_project.Shell
             
 
         }
-        //TODO: Check again the create table command
         public static void execCreateTable(string[] cmd)
         {
             if(cmd.Length == 1)
@@ -290,6 +290,22 @@ namespace SQL_CSharp_final_project.Shell
                 }
                 newTable[userInputBuffer["Is-PrimaryKey"]].setPrimaryKey = true;
                 newTable[userInputBuffer["Is-PrimaryKey"]].setNullAble = false;
+
+                for (int t = 0; t < newTable.totalColumns; t++)
+                {
+                    Console.Write($"{newTable[t].ColName} - {newTable[t].ColType.CompleteType} |");
+
+                }
+                Console.WriteLine();
+                Console.Write("To halt the table's creation type 'halt', to proceed type anything else.");
+                string toProceed = Console.ReadLine();
+
+                if(toProceed.ToLower() == "halt")
+                {
+                    Console.WriteLine($"Halting {newTable.TName}'s creation.");
+                    return;
+                }
+
                 contextDatabase.addTable(newTable);
                 Console.WriteLine($"Table {newTable.TName} created successfully.");
                 return;
@@ -297,9 +313,6 @@ namespace SQL_CSharp_final_project.Shell
             }
             execError();
         }
-
-
-        //TODO: Implement key-relations cmd
         public static void execSetKeyRelations(string[] cmd)
         {
 
@@ -364,7 +377,11 @@ namespace SQL_CSharp_final_project.Shell
 
                 if(contextDatabase != null)
                 {
-
+                    //set-key-relations ReferencerTable-Column ReferencedTable-Column
+                    // ReferencerTable = cmd[1][0] | ReferencerColumn = cmd[1][1]
+                    // ReferencedTable = cmd[2][0] | ReferencedColumn = cmd[2][1]
+                    
+                    SqlConnection conn = new SqlConnection(Connection.connectionString);
                     try
                     {
                         Dictionary<string, string[]> referencerAndReferenced = new Dictionary<string, string[]>(2);
@@ -401,15 +418,30 @@ namespace SQL_CSharp_final_project.Shell
                         }
                         contextDatabase[referencerTable.TName][referencerColumn.ColName].setForeignKeyAccessTable = referencedTable;
                         contextDatabase[referencerTable.TName][referencerColumn.ColName].setForeignKeyAccessColumn = referencedColumn;
+
+                        
+
+                        //FK@[ReferencerTable]@[ReferencerColumn]@[ReferencedTable]@[ReferencedColumn]
+
+                        
+                        SqlCommand command = conn.CreateCommand();
+                        command.CommandText = $@"use [{contextDatabase.Name}] alter table [{referencerTable.TName}]
+                                                add constraint FK@{referencerTable.TName}@{referencerColumn.ColName}@{referencedTable.TName}@{referencedColumn.ColName}
+                                                foreign key({referencerColumn.ColName}) references {referencedTable.TName}({referencedColumn.ColName});";
+                        conn.Open();
+                        command.ExecuteNonQuery();
+
+
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine(e.Message);
+                        conn.Close();
                         return;
 
-                        //TODO: Set the functionality to send it to the SQL through alter table
+                        
                     }
-
+                    conn.Close();
                     Console.WriteLine($"Key relations between the tables has been established.");
                     return;
 
@@ -546,7 +578,6 @@ namespace SQL_CSharp_final_project.Shell
 
             //}
         }
-
         public static void execSelectColumns(string[] cmd)
         {
             if(cmd.Length == 1)
@@ -590,7 +621,6 @@ namespace SQL_CSharp_final_project.Shell
             }
 
         }
-
         public static void execTablesAll()
         {
             Console.ForegroundColor = response;
@@ -603,7 +633,7 @@ namespace SQL_CSharp_final_project.Shell
             for(int i = 0; i < contextDatabase.tableCount(); i++)
             {
                 if (contextDatabase[i].TName != "sysdiagrams") 
-                Console.Write($"{contextDatabase[i].TName} |");
+                Console.Write($"{contextDatabase[i].TName} | ");
             }
             Console.WriteLine();
 
@@ -618,7 +648,7 @@ namespace SQL_CSharp_final_project.Shell
             }
             foreach (Database item in totalDatabases)
             {
-                Console.Write($"{item.Name} |");
+                Console.Write($"{item.Name} | ");
             }
             Console.WriteLine();
         }
@@ -652,7 +682,6 @@ namespace SQL_CSharp_final_project.Shell
             
 
         }
-
         public static void execShowData()
         {
             if(contextTable == null || contextDatabase == null)
@@ -664,7 +693,6 @@ namespace SQL_CSharp_final_project.Shell
 
             displayAllDetails();
         }
-
         public static void execFind(string[] cmd)
         {
             Console.ForegroundColor = response;
@@ -755,10 +783,9 @@ namespace SQL_CSharp_final_project.Shell
 
             }
         }
-
         public static void execEnterTable(string[] cmd)
         {
-            //one parameter - table name
+            
             Console.ForegroundColor = response;
             if (contextDatabase == null)
             {
@@ -794,8 +821,6 @@ namespace SQL_CSharp_final_project.Shell
             contextDatabase = Database.databaseFind(totalDatabases, cmd[1]);
             location[1] = $"\\{contextDatabase.Name}";
         }
-
-        //TODO: Implement delete-like cmd
         public static void execDeleteData(string[] cmd)
         {
             if (cmd.Length == 1)
@@ -881,7 +906,6 @@ namespace SQL_CSharp_final_project.Shell
             }
             execError();
         }
-        
         public static void execInsertData(string[] cmd)
         {
 
@@ -969,8 +993,7 @@ namespace SQL_CSharp_final_project.Shell
                 SqlCommand command = conn.CreateCommand();
                 try
                 {
-                    //INSERT INTO table_name
-                    //VALUES(value1, value2, value3, ...);
+                    
                     command.CommandText = $"use [{contextDatabase.Name}] insert into [{cmd[1]}] values (";
                     for(i = 0; i < contextDatabase[cmd[1]].totalColumns; i++)
                     {
@@ -1004,9 +1027,6 @@ namespace SQL_CSharp_final_project.Shell
                 
             }
         }
-
-        //TODO: upgrade(maybe?) update-like cmd
-        //
         public static void execUpdateData(string[] cmd)
         {
             if(cmd.Length == 1)
@@ -1034,9 +1054,7 @@ namespace SQL_CSharp_final_project.Shell
                 Console.WriteLine($"Records updating screen for {cmd[1]}");
                 Console.WriteLine($"Current records for {cmd[1]}:");
                 displayAllDetails();
-                //UPDATE table_name
-                //SET column1 = value1, column2 = value2, ...
-                //WHERE condition;
+                
                 Console.WriteLine("If you wish for a column to remain unchanged, type nothing.");
                 int i;
                 for(i = 0; i < contextTable.totalColumns; i++)
@@ -1055,7 +1073,7 @@ namespace SQL_CSharp_final_project.Shell
                         else if (Models.Type.isNumeric(contextTable[i].ColType.TypeName))
                         {
                             int test;
-                            while (int.TryParse(inputBuffer[contextTable[i].ColName], out test))
+                            while (!int.TryParse(inputBuffer[contextTable[i].ColName], out test))
                             {
                                 Console.Write($"{contextTable[i].ColName} ({contextTable[i].ColType.CompleteType}) is numeric: ");
                                 inputBuffer[contextTable[i].ColName] = Console.ReadLine();
@@ -1083,38 +1101,69 @@ namespace SQL_CSharp_final_project.Shell
                 //-----------------------
 
                 Console.Write("Select a column and a value as a predicate for the update:\n");
-                Console.WriteLine("Example [Column_Name]=[Value]");
-                
-                
+                Console.WriteLine("Example [Column_Name] [=/</>/<=/>=/!=] [Value]");
+               
                 string predicateInput = Console.ReadLine();
 
 
-                string[] predicateVerification = predicateInput.Split('=');
-                if(predicateVerification.Length != 2)
+                string[] predicateVerification = predicateInput.Split(' ');
+                if (Models.Type.isNumeric(contextTable[predicateVerification[0]].ColType.TypeName))
+                {
+                    while (!int.TryParse(predicateVerification[2], out int test))
+                    {
+                        Console.WriteLine($"Incompatible types between {contextTable[predicateVerification[0]].ColName}({contextTable[predicateVerification[0]].ColType.CompleteType}) " +
+                            $"and {predicateVerification[2]}");
+                        
+                        Console.WriteLine("Syntax: [Column_Name] [=/</>/<=/>=/!=] [Value]");
+                        Console.Write("Re-enter your predicate: ");
+                        predicateInput = Console.ReadLine();
+
+
+                        predicateVerification = predicateInput.Split(' ');
+                        if(predicateVerification.Length != 3)
+                        {
+                            Console.WriteLine("Update process has been cancelled.");
+                            contextTable = oldContext;
+                            return;
+                        }
+                    }
+                }
+                
+                if(predicateVerification.Length != 3)
                 {
                     Console.WriteLine("Invalid predicate assignment.");
                     contextTable = oldContext;
                     return;
                 }
+                if (!SyntaxParser.operatorExists(predicateVerification[1]))
+                {
+                    Console.WriteLine("Invalid predicate operator.");
+                    contextTable = oldContext;
+                    return;
+                }
+
+
                 if (Models.Type.isStringType(contextTable[predicateVerification[0]].ColType.TypeName))
                 {
-                    command.CommandText += $" where {predicateVerification[0]} = '{predicateVerification[1]}';";
+                    command.CommandText += $" where {predicateVerification[0]} {predicateVerification[1]} '{predicateVerification[2]}';";
 
                 }
                 else
                 {
-                    command.CommandText += $" where {predicateVerification[0]} = {predicateVerification[1]};";
+                    command.CommandText += $" where {predicateVerification[0]} {predicateVerification[1]} {predicateVerification[2]};";
                 }
+
                 try
                 {
+                    
                     conn.Open();
                     command.ExecuteNonQuery();
 
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-
-                    Console.WriteLine("Error occured at updating time, check your connection.");
+                    Console.WriteLine(e.Message);
+                    Console.WriteLine("Error occured at updating time.");
                     contextTable = oldContext;
                     conn.Close();
                     return;
@@ -1132,7 +1181,6 @@ namespace SQL_CSharp_final_project.Shell
             execError();
 
         }
-        //Re-load the edited columns from the database to memory
         public static void refreshDbList(List<string> colsToRefresh)
         {
             foreach (string item in colsToRefresh)
@@ -1166,12 +1214,13 @@ namespace SQL_CSharp_final_project.Shell
             {
                 Console.WriteLine(e.Message);
 
-                throw;
+                return;
             }
 
         }
         public static void execError()
         {
+
             Console.WriteLine("Error occured during the previous operation, make sure you typed the correct command or made a valid operation.");
             Console.WriteLine("For additional help, type 'help'.");
         }
@@ -1275,22 +1324,25 @@ namespace SQL_CSharp_final_project.Shell
                             constraintsReader = cmd.ExecuteReader();
                             while (constraintsReader.Read())
                             {
-                                if (constraintsReader["Key"].ToString() == $"PK_{totalDatabases[dIndex][tIndex].TName}" || 
-                                    constraintsReader["Key"].ToString() == $"PK_{totalDatabases[dIndex][tIndex].TName}_{constraintsReader["Column Name"]}")
+                                if (constraintsReader["Key"].ToString() == $"PK@{totalDatabases[dIndex][tIndex].TName}@{constraintsReader["Column Name"]}")
                                 {
                                     totalDatabases[dIndex][tIndex][constraintsReader["Column Name"].ToString()].setPrimaryKey = true;
 
                                 }
                                 if (constraintsReader["Key"].ToString().Contains("FK"))
                                 {
+                                    //FK@[ReferencerTable]@[ReferencerColumn]@[ReferencedTable]@[ReferencedColumn]
+                                    referencerAndRefrenced = constraintsReader["Key"].ToString().Split('@');
                                     
-                                    referencerAndRefrenced = constraintsReader["Key"].ToString().Split('_');
+                                    
                                     //0 -> FK
-                                    //1 -> referncer
-                                    //2 -> referenced
+                                    //1 -> referncer-Table
+                                    //2 -> referencer-Column
+                                    //3 -> referenced-Table
+                                    //4 -> referenced-Column
+                                    totalDatabases[dbIndex][referencerAndRefrenced[1]][referencerAndRefrenced[2]].setForeignKeyAccessTable = totalDatabases[dbIndex][referencerAndRefrenced[3]];
+                                    totalDatabases[dbIndex][referencerAndRefrenced[1]][referencerAndRefrenced[2]].setForeignKeyAccessColumn = totalDatabases[dbIndex][referencerAndRefrenced[3]][referencerAndRefrenced[4]];
                                     
-                                    totalDatabases[dIndex][referencerAndRefrenced[1]][constraintsReader["Column Name"].ToString()].setForeignKeyAccessTable = totalDatabases[dIndex][referencerAndRefrenced[2]];
-                                    totalDatabases[dIndex][referencerAndRefrenced[1]][constraintsReader["Column Name"].ToString()].setForeignKeyAccessColumn = totalDatabases[dIndex][referencerAndRefrenced[2]].findPrimaryKey();
 
                                     
                                 }
@@ -1325,8 +1377,6 @@ namespace SQL_CSharp_final_project.Shell
 
 
         }
-
-
         public static void displayAllDetails()
         {
             SqlConnection conn = new SqlConnection(Connection.connectionString);
