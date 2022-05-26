@@ -56,8 +56,6 @@ namespace SQL_CSharp_final_project.Models
 
         private List<Table> Tables = new List<Table>();
 
-
-
         public Database()
         {
 
@@ -379,8 +377,11 @@ namespace SQL_CSharp_final_project.Models
         private string _typeName { get; set; }
         private int _characterLength { get; set; }
 
-        public static List<string> sqlTypes = new List<string>();
+        public static List<string> sqlValidationTypes = new List<string>();
 
+        
+
+        
         public Type(string typeName, int charLen)
         {
             _typeName = typeName;
@@ -419,6 +420,7 @@ namespace SQL_CSharp_final_project.Models
 
         public static void populateSqlTypes(List<string> types)
         {
+
             SqlConnection conn = new SqlConnection(Connection.connectionString);
             SqlCommand cmd = conn.CreateCommand();
             try
@@ -428,7 +430,8 @@ namespace SQL_CSharp_final_project.Models
                 SqlDataReader read = cmd.ExecuteReader();
                 while (read.Read())
                 {
-                    sqlTypes.Add(read["name"].ToString());
+                   
+                    sqlValidationTypes.Add(read["name"].ToString());
                 }
                 read.Close();
 
@@ -444,9 +447,6 @@ namespace SQL_CSharp_final_project.Models
                 Console.WriteLine("Error occured at connection time.");
                 Console.WriteLine($"{e.Message}"); 
                
-
-                
-                
             }
             
            
@@ -465,7 +465,7 @@ namespace SQL_CSharp_final_project.Models
         }
 
 
-
+       
 
         public static bool isNumeric(string type)
         {
@@ -481,8 +481,12 @@ namespace SQL_CSharp_final_project.Models
 
         public static bool isValidType(string type)
         {
-            return sqlTypes.Contains(type);
+
+            return sqlValidationTypes.Contains(type);
         }
+
+
+        
 
     }
 
@@ -625,33 +629,7 @@ namespace SQL_CSharp_final_project.Models
             _Contents.Add(data);
         }
 
-        public static int parseColumnDataInt(Column column, Data data)
-        {
-            int output;
-            if (!int.TryParse(data.getData, out output))
-            {
-                return -1;
-            }
-            return output;
-        }
-        public static float parseColumnDataFloat(Column column, Data data)
-        {
-            float output;
-            if (!float.TryParse(data.getData, out output))
-            {
-                return -1;
-            }
-            return output;
-        }
-        public static double parseColumnDateDouble(Column column, Data data)
-        {
-            double output;
-            if (!double.TryParse(data.getData, out output))
-            {
-                return -1;
-            }
-            return output;
-        }
+       
 
 
 
@@ -689,40 +667,120 @@ namespace SQL_CSharp_final_project.Models
 
     }
 
-    //TODO: Implement simple task-cmds(sum, average, max, min, count)
+    
     public static class Task
     {
-        public delegate int Operation(Column col);
+        public delegate Data Operation(Column col);
         public static Dictionary<string, Operation> operationsList = new Dictionary<string, Operation>();
         public static void initTasks()
         {
             operationsList.Add("sum", sum);
             operationsList.Add("avg", avg);
-            operationsList.Add("count", count);
             operationsList.Add("max", max);
             operationsList.Add("min", min);
         }
-        //takes a column -> checks if it's type is numeric
-        public static int sum(Column col)
+        
+        public static Data sum(Column col)
         {
-            return -1;
-        }
-        public static int avg(Column col)
-        {
-            return -1;
-        }
-        public static int count(Column col)
-        {
-            return -1;
-        }
-        public static int max(Column col)
-        {
-            return -1;
-        }
-        public static int min(Column col)
-        {
+
+
+            if(!Type.isNumeric(col.ColType.TypeName))
+            return null;
+
             
-            return -1;
+
+            float output = 0f;
+
+            
+            int i;
+            for(i = 0; i < col.retrieveAllData.Count; i++)
+            {
+                output += float.Parse(col.retrieveAllData[i].getData);
+            }
+            return new Data(output.ToString());
+        }
+        public static Data avg(Column col)
+        {
+
+            
+
+            if (!Type.isNumeric(col.ColType.TypeName))
+                return null;
+            
+            
+            
+
+            float totalAvg = float.Parse(sum(col).getData) / col.retrieveAllData.Count;
+            
+            return new Data(totalAvg.ToString());
+
+        }
+        public static Data max(Column col)
+        {
+            int i;
+            
+            Data max = col.retrieveAllData[0];
+
+
+            if (Type.isNumeric(col.ColType.TypeName))
+            {
+                float maxF = float.Parse(col.retrieveAllData[0].getData);
+                for(i = 1; i < col.retrieveAllData.Count; i++)
+                {
+                    float value = float.Parse(col.retrieveAllData[i].getData);
+                    if(maxF < value)
+                    {
+                        max = col.retrieveAllData[i];
+                        maxF = value;
+                    }
+                }
+                return max;
+            }
+
+
+            
+            for(i = 1; i < col.retrieveAllData.Count; i++)
+            {
+                if(max.getData.CompareTo(col.retrieveAllData[i].getData) == -1)
+                {
+                    max = col.retrieveAllData[i];
+                }
+            }
+
+
+
+            return max;
+        }
+        public static Data min(Column col)
+        {
+            int i;
+            Data min = col.retrieveAllData[0];
+
+            if (Type.isNumeric(col.ColType.TypeName))
+            {
+                float minF = float.Parse(col.retrieveAllData[0].getData);
+                for (i = 1; i < col.retrieveAllData.Count; i++)
+                {
+                    float value = float.Parse(col.retrieveAllData[i].getData);
+                    if (minF > value)
+                    {
+                        min = col.retrieveAllData[i];
+                        minF = value;
+                    }
+                }
+                return min;
+            }
+
+
+
+            for (i = 1; i < col.retrieveAllData.Count; i++)
+            {
+                if(min.getData.CompareTo(col.retrieveAllData[i].getData) == 1)
+                {
+                    min = col.retrieveAllData[i];
+                }
+            }
+            return min;
         }
     }
 }

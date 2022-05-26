@@ -15,7 +15,8 @@ namespace SQL_CSharp_final_project
         {
 
 
-            //TODO: Final task -> Organize and finalize the project and prepare it for submission.
+            
+
 
             Shell.Shell.shellInit();
 

@@ -65,7 +65,7 @@ namespace SQL_CSharp_final_project.Shell
             parameterCommandsExecution.Add("select-data", execSelectColumns);
             parameterCommandsExecution.Add("update", execUpdateData);
             parameterCommandsExecution.Add("insert-data", execInsertData);
-
+            parameterCommandsExecution.Add("task", taskCommand);
             Models.Task.initTasks();
 
         }
@@ -81,9 +81,9 @@ namespace SQL_CSharp_final_project.Shell
                 }
                 catch (Exception)
                 {
+
                     execError();
                     return;
-                    
                 }
                 return;
             }
@@ -99,6 +99,7 @@ namespace SQL_CSharp_final_project.Shell
             return;
         
         }
+
         public static string shellInput(string[] location)
         {
             Console.ForegroundColor = ConsoleColor.Green;
@@ -129,9 +130,11 @@ namespace SQL_CSharp_final_project.Shell
             Console.WriteLine("find [Column_Name] [Data]-> Displays all the data according to the command's parameters.", response);
             Console.WriteLine("show-data -> Allows the user to view all the data inside the context of the current table.", response);
             Console.WriteLine("select-data [Column_Name ...] -> Allows the user to view the data from the selected columns.", response);
+            Console.WriteLine("Task [Sum/Avg/Max/Min] [Column_Name] -> Allows the user to perform a task on the data of a particular column.", response);
             Console.WriteLine("set-key-relations [Referencer_Table-Referencer_Column] [Referenced_Table-Referenced_Column] -> Allows the user to set up Foreign Key - Primary Key relations.", response);
             Console.WriteLine("quit -> Terminates the program.", response);
         }
+
         public static void execClear()
         {
             Console.Clear();
@@ -227,9 +230,9 @@ namespace SQL_CSharp_final_project.Shell
                     while (!Models.Type.isValidType(userInputBuffer["Col Type"]))
                     {
                         Console.WriteLine("Invalid type, all the types which allowed are:");
-                        for(int k = 0; k < Models.Type.sqlTypes.Count; k++)
+                        for(int k = 0; k < Models.Type.sqlValidationTypes.Count; k++)
                         {
-                            Console.Write($"{Models.Type.sqlTypes[k]}, ");
+                            Console.Write($"{Models.Type.sqlValidationTypes[k]}, ");
                         }
                         Console.WriteLine();
                         Console.Write($"Enter the type of the {i}th column:");
@@ -675,7 +678,7 @@ namespace SQL_CSharp_final_project.Shell
             }
             Connection.connectionString += $"Integrated Security={inputBuffer};";
             totalDatabases.Clear();
-            Models.Type.sqlTypes.Clear();
+            Models.Type.sqlValidationTypes.Clear();
             
             Connection.setupConnection();
             populateTotalDatabases();
@@ -1370,7 +1373,7 @@ namespace SQL_CSharp_final_project.Shell
                 conn.Close();
                 Console.ForegroundColor = response;
                 Console.WriteLine($"Successfully loaded all data from {location[0]}.");
-                Models.Type.populateSqlTypes(Models.Type.sqlTypes);
+                Models.Type.populateSqlTypes(Models.Type.sqlValidationTypes);
 
             }
 
@@ -1379,24 +1382,12 @@ namespace SQL_CSharp_final_project.Shell
         }
         public static void displayAllDetails()
         {
-            SqlConnection conn = new SqlConnection(Connection.connectionString);
-            SqlCommand cmd = conn.CreateCommand();
-            //SqlDataReader reader;
+           
             try
             {
                 Console.ForegroundColor = response;
                 int i;
-                //for (i = 0; i < contextTable.totalColumns; i++)
-                //{
-                //    Console.Write($"{contextTable[i].ColName}\t|");
-                //}
-                //Console.WriteLine();
                 
-                //cmd.CommandText = $@"use [{contextDatabase.Name}]
-                //                 select * from [{contextTable.TName}]";
-                //conn.Open();
-                //reader = cmd.ExecuteReader();
-                //int k = 0;
                 int t = 0;
                 for(i = 0; i < contextTable.totalColumns; i++)
                 {
@@ -1408,33 +1399,57 @@ namespace SQL_CSharp_final_project.Shell
                     Console.WriteLine();
                 }
 
-                //while (reader.Read())
-                //{
-                //    Console.Write($"{contextTable[k].ColName} : ", Console.ForegroundColor = ConsoleColor.Gray);
-                //    for (i = 0; i < contextTable.totalColumns; i++)
-                //    {
-                //        Console.Write($"{reader[i]}||");
-
-                //    }
-                //    Console.WriteLine();
-                //    k++;
-
-                //}
-                //reader.Close();
+               
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                
-                conn.Close();
+
+                Console.WriteLine(e.Message);
                 execError();
                 return;
                 
             }
 
-            //reader.Close();
-            //conn.Close();
+            
         }
+        public static void taskCommand(string[] cmd)
+        {
+            if(cmd.Length == 3)
+            {
+                if(contextDatabase != null && contextTable != null)
+                {
+                    if (!contextTable.columnExists(cmd[2]))
+                    {
+                        Console.WriteLine($"Column {cmd[2]} doesn't exist in {contextTable.TName}");
+                        return;
+                    }
+                    Data outputData = null;
+                    try
+                    {
+                        outputData = Models.Task.operationsList[cmd[1]](contextTable[cmd[2]]);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                        execError();
+                        return;
+                        
+                    }
+                    if(outputData == null)
+                    {
+                        Console.WriteLine($"Invalid input data from column {cmd[2]}.");
+                        return;
+                    }
+                    displayAllDetails();
+                    Console.WriteLine($"The result of operation {cmd[1]} in column {cmd[2]} is: {outputData.getData}");
+                    return;
+                }
+                Console.WriteLine("To perform the task you must be within the context of a database and a table.");
+                return;
+            }
+            execError();
+            return;
 
-
+        }
     }
 }
