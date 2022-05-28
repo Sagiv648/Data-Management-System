@@ -644,9 +644,14 @@ namespace SQL_CSharp_final_project.Shell
         public static void execDatabaseAll()
         {
             Console.ForegroundColor = response;
-            if(totalDatabases.Count == 0)
+            if(location[0] == null)
             {
                 Console.WriteLine("Error occured at loading time, make sure the connection settings are valid.");
+                return;
+            }
+            else if(totalDatabases.Count == 0)
+            {
+                Console.WriteLine("No databases found.");
                 return;
             }
             foreach (Database item in totalDatabases)
@@ -942,8 +947,8 @@ namespace SQL_CSharp_final_project.Shell
                     
                     if (Models.Type.isNumeric(contextDatabase[cmd[1]][i].ColType.TypeName))
                     {
-                        int test;
-                        while(!int.TryParse(inputBuffer[contextDatabase[cmd[1]][i].ColName], out test))
+                        float test;
+                        while(!float.TryParse(inputBuffer[contextDatabase[cmd[1]][i].ColName], out test))
                         {
                             Console.Write("Type has to be numeric:");
                             inputBuffer[contextDatabase[cmd[1]][i].ColName] = Console.ReadLine();
@@ -1075,8 +1080,8 @@ namespace SQL_CSharp_final_project.Shell
                         }
                         else if (Models.Type.isNumeric(contextTable[i].ColType.TypeName))
                         {
-                            int test;
-                            while (!int.TryParse(inputBuffer[contextTable[i].ColName], out test))
+                            float test;
+                            while (!float.TryParse(inputBuffer[contextTable[i].ColName], out test))
                             {
                                 Console.Write($"{contextTable[i].ColName} ({contextTable[i].ColType.CompleteType}) is numeric: ");
                                 inputBuffer[contextTable[i].ColName] = Console.ReadLine();
@@ -1112,7 +1117,7 @@ namespace SQL_CSharp_final_project.Shell
                 string[] predicateVerification = predicateInput.Split(' ');
                 if (Models.Type.isNumeric(contextTable[predicateVerification[0]].ColType.TypeName))
                 {
-                    while (!int.TryParse(predicateVerification[2], out int test))
+                    while (!float.TryParse(predicateVerification[2], out float test))
                     {
                         Console.WriteLine($"Incompatible types between {contextTable[predicateVerification[0]].ColName}({contextTable[predicateVerification[0]].ColType.CompleteType}) " +
                             $"and {predicateVerification[2]}");
